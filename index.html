@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vibe Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07090a;
+    --bg2:#0e1210;
+    --fg:#3dff6e;
+    --fg-dim:#1c7a37;
+    --amber:#ffb000;
+    --line:#123018;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    height:100%;
+    margin:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px),
+      radial-gradient(ellipse at 50% 0%, var(--bg2), var(--bg) 75%);
+    color:var(--fg);
+    font-family:'VT323', monospace;
+    overflow:hidden;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .heading{
+    font-family:'Press Start 2P', monospace;
+  }
+  #menu, #gameView{
+    height:100%;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .hidden{ display:none !important; }
+
+  /* ---- Menu screen ---- */
+  #menu{
+    justify-content:flex-start;
+    overflow-y:auto;
+    padding:28px 16px 20px;
+    gap:8px;
+  }
+  #menu h1{
+    font-size:clamp(20px,6vw,34px);
+    letter-spacing:5px;
+    margin:0;
+    color:var(--fg);
+    text-shadow:0 0 10px var(--fg-dim), 0 0 24px var(--fg-dim);
+  }
+  #menu .tagline{
+    font-size:16px;
+    color:var(--amber);
+    letter-spacing:2px;
+    margin:6px 0 26px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,260px));
+    gap:22px;
+    justify-content:center;
+    width:100%;
+    max-width:640px;
+    padding-bottom:20px;
+  }
+  .card{
+    font-family:inherit;
+    color:var(--fg);
+    background:linear-gradient(180deg,#0d130f,#080b09);
+    border:2px solid var(--fg);
+    border-radius:8px;
+    box-shadow:0 0 0 4px var(--bg), 0 0 16px var(--fg-dim);
+    padding:20px 16px 18px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:hover, .card:focus-visible{
+    transform:translateY(-3px);
+    box-shadow:0 0 0 4px var(--bg), 0 0 26px var(--amber);
+    outline:none;
+    border-color:var(--amber);
+    color:var(--amber);
+  }
+  .icon{
+    width:64px;height:64px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .icon svg{ width:100%; height:100%; }
+  .card h2{
+    font-family:'Press Start 2P', monospace;
+    font-size:13px;
+    letter-spacing:1px;
+    margin:0;
+    text-align:center;
+  }
+  .card p{
+    font-size:15px;
+    color:var(--fg-dim);
+    margin:0;
+    text-align:center;
+    line-height:1.35;
+  }
+  .card .play{
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    letter-spacing:2px;
+    color:var(--amber);
+    margin-top:2px;
+  }
+  #menu footer{
+    font-size:13px;
+    color:var(--fg-dim);
+    letter-spacing:1px;
+    padding-bottom:6px;
+    text-align:center;
+  }
+
+  /* ---- Game screen ---- */
+  #gameView{
+    justify-content:flex-start;
+  }
+  nav{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:12px 14px;
+    border-bottom:2px solid var(--line);
+    flex-shrink:0;
+  }
+  #backBtn{
+    font-family:'Press Start 2P', monospace;
+    font-size:11px;
+    background:var(--bg);
+    color:var(--fg);
+    border:2px solid var(--fg);
+    padding:9px 14px;
+    letter-spacing:1px;
+    cursor:pointer;
+    border-radius:4px;
+  }
+  #backBtn:hover, #backBtn:focus-visible{
+    background:var(--fg);
+    color:var(--bg);
+    outline:none;
+  }
+  #gameTitle{
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    color:var(--amber);
+    letter-spacing:2px;
+  }
+  .frameWrap{
+    flex:1;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    min-height:0;
+  }
+  #gameFrame{
+    width:100%;
+    height:100%;
+    border:none;
+    background:#07090a;
+  }
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <h1 class="heading">VIBE ARCADE</h1>
+  <div class="tagline">CLICK OR TAP A TILE TO PLAY</div>
+  <div class="grid">
+    <button class="card" data-game="paddle">
+      <div class="icon">
+        <svg viewBox="0 0 64 64"><circle cx="32" cy="18" r="6" fill="#ffb000"/><rect x="14" y="46" width="36" height="8" rx="2" fill="#3dff6e"/></svg>
+      </div>
+      <h2 class="heading">PADDLE<br>BALL</h2>
+      <p>Classic brick-less bounce.<br>Don't let it drop.</p>
+      <div class="play">▶ PLAY</div>
+    </button>
+    <button class="card" data-game="snake">
+      <div class="icon">
+        <svg viewBox="0 0 64 64"><rect x="10" y="30" width="10" height="10" fill="#28331c"/><rect x="20" y="30" width="10" height="10" fill="#28331c"/><rect x="30" y="30" width="10" height="10" fill="#28331c"/><rect x="30" y="20" width="10" height="10" fill="#28331c"/><rect x="44" y="20" width="10" height="10" fill="#d94f4f"/></svg>
+      </div>
+      <h2 class="heading">JAGGY<br>SNAKE</h2>
+      <p>Grow long, avoid yourself,<br>chase the high score.</p>
+      <div class="play">▶ PLAY</div>
+    </button>
+  </div>
+  <footer>← → / WASD / ARROWS</footer>
+</div>
+
+<div id="gameView" class="hidden">
+  <nav>
+    <button id="backBtn">‹ ARCADE</button>
+    <span id="gameTitle" class="heading"></span>
+  </nav>
+  <div class="frameWrap">
+    <iframe id="gameFrame" title="game"></iframe>
+  </div>
+</div>
+
+<script>
+(function(){
+  const GAMES = {
+    paddle: {
+      title: 'PADDLE BALL',
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paddle Ball</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f0a;
+    --fg:#3dff6e;
+    --fg-dim:#1c7a37;
+    --amber:#ffb000;
+    --line:#123018;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:'Press Start 2P', monospace;
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    height:100%;
+  }
+
+  #wrap{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+
+  h1{
+    font-size:clamp(14px,4vw,22px);
+    letter-spacing:4px;
+    margin:0;
+    color:var(--fg);
+    text-shadow:0 0 6px var(--fg-dim);
+  }
+
+  #hud{
+    display:flex;
+    justify-content:space-between;
+    width:100%;
+    font-size:10px;
+    color:var(--fg);
+    padding:0 4px;
+  }
+
+  #stage{
+    position:relative;
+    border:3px solid var(--fg);
+    box-shadow:0 0 0 4px var(--bg), 0 0 18px var(--fg-dim), inset 0 0 30px rgba(61,255,110,0.08);
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px),
+      var(--bg);
+  }
+
+  canvas{
+    display:block;
+    image-rendering:pixelated;
+  }
+
+  #overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    background:rgba(11,15,10,0.88);
+    text-align:center;
+    padding:20px;
+  }
+  #overlay.hidden{display:none;}
+  #overlay p{
+    font-size:9px;
+    line-height:1.9;
+    color:var(--fg);
+    margin:0;
+    max-width:280px;
+  }
+  #overlay .title{
+    font-size:16px;
+    color:var(--amber);
+    text-shadow:0 0 8px var(--amber);
+    margin:0;
+  }
+  #overlay .sub{
+    font-size:9px;
+    color:var(--fg-dim);
+  }
+
+  button{
+    font-family:'Press Start 2P', monospace;
+    background:var(--bg);
+    color:var(--fg);
+    border:2px solid var(--fg);
+    padding:10px 18px;
+    font-size:10px;
+    cursor:pointer;
+    letter-spacing:2px;
+  }
+  button:hover{ background:var(--fg); color:var(--bg); }
+  button:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  #footer{
+    font-size:8px;
+    color:var(--fg-dim);
+    letter-spacing:1px;
+  }
+
+  @media (max-width: 480px){
+    #footer{display:none;}
+  }
+
+  .name-entry{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    margin-top:2px;
+  }
+  .name-entry.hidden{display:none;}
+  .name-entry input{
+    font-family:'Press Start 2P', monospace;
+    font-size:11px;
+    text-align:center;
+    text-transform:uppercase;
+    width:11ch;
+    padding:9px 4px;
+    background:var(--bg);
+    border:2px solid var(--fg);
+    color:var(--fg);
+    outline:none;
+    letter-spacing:2px;
+  }
+  .name-entry input:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  .menu-link{
+    font-size:9px;
+    color:var(--fg-dim);
+    text-decoration:underline;
+    cursor:pointer;
+    letter-spacing:1px;
+    background:none;
+    border:none;
+    font-family:'Press Start 2P', monospace;
+    padding:4px;
+  }
+  .menu-link:hover{ color:var(--fg); }
+
+  #scoresOverlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    background:rgba(11,15,10,0.94);
+    text-align:center;
+    padding:20px;
+  }
+  #scoresOverlay.hidden{display:none;}
+
+  #scoresList{
+    list-style:none;
+    counter-reset:score;
+    margin:0;
+    padding:0;
+    width:100%;
+    max-width:260px;
+    font-size:10px;
+  }
+  #scoresList li{
+    counter-increment:score;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    border-bottom:1px dotted var(--fg-dim);
+    padding:5px 2px;
+    color:var(--fg);
+  }
+  #scoresList li::before{
+    content: counter(score) ".";
+    width:1.8em;
+    text-align:left;
+    color:var(--fg-dim);
+  }
+  #scoresList li span:first-of-type{ flex:1; text-align:left; }
+  #scoresList li span:last-of-type{ color:var(--amber); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>PADDLE BALL</h1>
+  <div id="hud" style="width:100%; max-width:600px;">
+    <span>SCORE <span id="score">0</span></span>
+    <span>BEST <span id="best">0</span></span>
+    <span>LIVES <span id="lives">3</span></span>
+  </div>
+  <div id="stage">
+    <canvas id="game" width="600" height="400"></canvas>
+    <div id="overlay">
+      <p class="title">PADDLE BALL</p>
+      <p>MOVE THE PADDLE WITH YOUR MOUSE, ARROW KEYS,<br>OR FINGER. DON'T LET THE BALL FALL.</p>
+      <button id="startBtn">START</button>
+      <p class="sub" id="statusMsg">PRESS SPACE OR TAP START</p>
+      <div class="name-entry hidden" id="nameEntry">
+        <input id="nameInput" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
+        <button id="saveScoreBtn">SAVE SCORE</button>
+        <button class="menu-link" id="skipSaveLink" type="button">DON'T SAVE</button>
+      </div>
+    </div>
+    <div id="scoresOverlay" class="hidden">
+      <p class="title">HIGH SCORES</p>
+      <ol id="scoresList"></ol>
+      <button id="closeScoresBtn">CLOSE</button>
+    </div>
+  </div>
+  <div id="footer">← → OR A/D TO MOVE · SPACE TO LAUNCH</div>
+  <button class="menu-link" id="viewScoresLink" type="button">★ VIEW HIGH SCORES ★</button>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const livesEl = document.getElementById('lives');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const statusMsg = document.getElementById('statusMsg');
+  const nameEntry = document.getElementById('nameEntry');
+  const nameInput = document.getElementById('nameInput');
+  const saveScoreBtn = document.getElementById('saveScoreBtn');
+  const skipSaveLink = document.getElementById('skipSaveLink');
+  const scoresOverlay = document.getElementById('scoresOverlay');
+  const scoresList = document.getElementById('scoresList');
+  const viewScoresLink = document.getElementById('viewScoresLink');
+  const closeScoresBtn = document.getElementById('closeScoresBtn');
+
+  let best = 0;
+  try {
+    const stored = localStorage.getItem('paddleBallBest');
+    if (stored) best = parseInt(stored, 10) || 0;
+  } catch(e) {}
+  bestEl.textContent = best;
+
+  let awaitingName = false;
+
+  function getScores(){
+    try { return JSON.parse(localStorage.getItem('paddleBallScores') || '[]'); }
+    catch(e) { return []; }
+  }
+
+  function saveScoreEntry(name, sc){
+    const list = getScores();
+    list.push({ name: name || 'AAA', score: sc });
+    list.sort((a,b) => b.score - a.score);
+    try { localStorage.setItem('paddleBallScores', JSON.stringify(list.slice(0,10))); } catch(e) {}
+  }
+
+  function renderScores(){
+    const list = getScores();
+    scoresList.innerHTML = '';
+    if (list.length === 0){
+      const li = document.createElement('li');
+      li.innerHTML = '<span>NO SCORES YET</span><span></span>';
+      scoresList.appendChild(li);
+      return;
+    }
+    list.forEach(entry => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span>' + entry.name + '</span><span>' + entry.score + '</span>';
+      scoresList.appendChild(li);
+    });
+  }
+
+  function submitName(){
+    const name = (nameInput.value || 'AAA').trim().toUpperCase().slice(0,10) || 'AAA';
+    try { localStorage.setItem('paddleBallName', name); } catch(e) {}
+    saveScoreEntry(name, score);
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    statusMsg.textContent = 'SCORE SAVED · SPACE TO RETRY';
+    startBtn.classList.remove('hidden');
+  }
+
+  function skipSave(){
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    statusMsg.textContent = 'NOT SAVED · SPACE TO RETRY';
+    startBtn.classList.remove('hidden');
+  }
+
+  const PADDLE_W = 90, PADDLE_H = 12;
+  const BALL_R = 7;
+
+  let paddle, ball, score, lives, running, launched, keys;
+
+  function resetGame(){
+    paddle = { x: W/2 - PADDLE_W/2, y: H - 34, w: PADDLE_W, h: PADDLE_H, speed: 7 };
+    ball = { x: W/2, y: H - 34 - BALL_R - 1, vx: 0, vy: 0, speed: 4.5 };
+    score = 0;
+    lives = 3;
+    running = false;
+    launched = false;
+    keys = {};
+    scoreEl.textContent = score;
+    livesEl.textContent = lives;
+  }
+
+  function launchBall(){
+    if (launched) return;
+    launched = true;
+    const angle = (Math.random() * 0.6 - 0.3) - Math.PI/2; // mostly upward
+    ball.vx = Math.cos(angle) * ball.speed;
+    ball.vy = Math.sin(angle) * ball.speed;
+  }
+
+  function startGame(){
+    resetGame();
+    running = true;
+    overlay.classList.add('hidden');
+    nameEntry.classList.add('hidden');
+    startBtn.classList.remove('hidden');
+    awaitingName = false;
+    requestAnimationFrame(loop);
+  }
+
+  function endGame(win){
+    running = false;
+    if (score > best) {
+      best = score;
+      bestEl.textContent = best;
+      try { localStorage.setItem('paddleBallBest', String(best)); } catch(e) {}
+    }
+    overlay.classList.remove('hidden');
+    overlay.querySelector('.title').textContent = 'GAME OVER';
+    startBtn.textContent = 'RETRY';
+
+    const list = getScores();
+    const qualifies = list.length < 10 || score > list[list.length - 1].score;
+    if (qualifies && score > 0){
+      awaitingName = true;
+      statusMsg.textContent = 'SCORE ' + score + ' · NEW HIGH SCORE!';
+      startBtn.classList.add('hidden');
+      nameEntry.classList.remove('hidden');
+      nameInput.value = localStorage.getItem('paddleBallName') || '';
+      setTimeout(() => nameInput.focus(), 50);
+    } else {
+      statusMsg.textContent = 'SCORE ' + score + ' · PRESS SPACE TO RETRY';
+    }
+  }
+
+  function draw(){
+    ctx.fillStyle = '#0b0f0a';
+    ctx.fillRect(0,0,W,H);
+
+    // center dashed line
+    ctx.strokeStyle = '#1c7a37';
+    ctx.setLineDash([6,8]);
+    ctx.beginPath();
+    ctx.moveTo(0, H-60);
+    ctx.lineTo(W, H-60);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // paddle
+    ctx.fillStyle = '#3dff6e';
+    ctx.shadowColor = '#3dff6e';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+
+    // ball
+    ctx.fillStyle = '#ffb000';
+    ctx.shadowColor = '#ffb000';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    if (!launched){
+      ctx.fillStyle = '#1c7a37';
+      ctx.font = '9px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('SPACE / TAP TO LAUNCH', W/2, H/2);
+    }
+  }
+
+  function update(){
+    // paddle movement (keyboard)
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) paddle.x -= paddle.speed;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) paddle.x += paddle.speed;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, paddle.x));
+
+    if (!launched){
+      ball.x = paddle.x + paddle.w/2;
+      ball.y = paddle.y - BALL_R - 1;
+      return;
+    }
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // wall collisions
+    if (ball.x - BALL_R < 0){ ball.x = BALL_R; ball.vx *= -1; }
+    if (ball.x + BALL_R > W){ ball.x = W - BALL_R; ball.vx *= -1; }
+    if (ball.y - BALL_R < 0){ ball.y = BALL_R; ball.vy *= -1; }
+
+    // paddle collision
+    if (ball.vy > 0 &&
+        ball.y + BALL_R >= paddle.y &&
+        ball.y + BALL_R <= paddle.y + paddle.h + 6 &&
+        ball.x >= paddle.x - BALL_R &&
+        ball.x <= paddle.x + paddle.w + BALL_R){
+      ball.y = paddle.y - BALL_R;
+      const hitPos = (ball.x - (paddle.x + paddle.w/2)) / (paddle.w/2); // -1..1
+      const angle = hitPos * (Math.PI/3) - Math.PI/2; // spread up to 60deg
+      ball.speed = Math.min(ball.speed + 0.15, 11);
+      ball.vx = Math.cos(angle) * ball.speed;
+      ball.vy = Math.sin(angle) * ball.speed;
+      score++;
+      scoreEl.textContent = score;
+    }
+
+    // missed
+    if (ball.y - BALL_R > H){
+      lives--;
+      livesEl.textContent = lives;
+      if (lives <= 0){
+        endGame(false);
+        return;
+      }
+      launched = false;
+      ball.speed = 4.5;
+    }
+  }
+
+  function loop(){
+    if (!running) return;
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // controls
+  window.addEventListener('keydown', (e) => {
+    if (awaitingName){
+      if (e.key === 'Enter') submitName();
+      return;
+    }
+    if (!scoresOverlay.classList.contains('hidden')) return;
+    keys[e.key] = true;
+    if (e.key === ' '){
+      e.preventDefault();
+      if (!running){ startGame(); }
+      else launchBall();
+    }
+  });
+  window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / rect.width;
+    const x = (e.clientX - rect.left) * scale;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, x - paddle.w/2));
+  });
+  canvas.addEventListener('click', () => {
+    if (awaitingName || !scoresOverlay.classList.contains('hidden')) return;
+    if (!running) startGame(); else launchBall();
+  });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / rect.width;
+    const x = (e.touches[0].clientX - rect.left) * scale;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, x - paddle.w/2));
+  }, { passive:false });
+  canvas.addEventListener('touchstart', () => {
+    if (awaitingName || !scoresOverlay.classList.contains('hidden')) return;
+    if (!running) startGame(); else launchBall();
+  });
+
+  startBtn.addEventListener('click', () => {
+    if (awaitingName) return;
+    startGame();
+  });
+
+  saveScoreBtn.addEventListener('click', (e) => { e.stopPropagation(); submitName(); });
+  skipSaveLink.addEventListener('click', (e) => { e.stopPropagation(); skipSave(); });
+  nameInput.addEventListener('click', (e) => e.stopPropagation());
+  nameInput.addEventListener('keydown', (e) => e.stopPropagation());
+
+  viewScoresLink.addEventListener('click', () => {
+    renderScores();
+    scoresOverlay.classList.remove('hidden');
+  });
+  closeScoresBtn.addEventListener('click', () => {
+    scoresOverlay.classList.add('hidden');
+  });
+
+  // responsive canvas sizing
+  function resize(){
+    const maxW = Math.min(600, window.innerWidth - 32);
+    const ratio = H / W;
+    canvas.style.width = maxW + 'px';
+    canvas.style.height = (maxW * ratio) + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  resetGame();
+  draw();
+})();
+<\/script>
+</body>
+</html>
+`
+    },
+    snake: {
+      title: 'JAGGY SNAKE',
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jaggy Snake</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --shell:#4b4d43;
+    --shell-hi:#6b6e5f;
+    --shell-lo:#2f312a;
+    --screen-bg:#c3d6a5;
+    --screen-bg-2:#b6cb96;
+    --pixel:#28331c;
+    --pixel-dim:#28331c55;
+    --btn:#5c5f52;
+    --btn-hi:#7a7d6b;
+    --btn-lo:#232419;
+    --accent:#d94f4f;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+  }
+  @media (prefers-color-scheme: light){ :root{} }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    height:100%;
+    margin:0;
+    background: radial-gradient(ellipse at 50% 0%, #3a3c34, #1b1c17 70%);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'VT323', monospace;
+    overflow:hidden;
+    touch-action:none;
+  }
+  .phone{
+    width:min(90vmin, 720px);
+    padding:8px 4px 10px;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .brand{
+    text-align:center;
+    color:#cfd2c2;
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    letter-spacing:2px;
+    margin-bottom:12px;
+    text-shadow:0 1px 0 rgba(0,0,0,.5);
+  }
+  .screen{
+    position:relative;
+    background: linear-gradient(180deg, var(--screen-bg), var(--screen-bg-2));
+    border-radius:6px;
+    width:100%;
+    aspect-ratio: 1 / 1;
+    overflow:hidden;
+    box-shadow: inset 0 0 16px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.5);
+  }
+  canvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    image-rendering:pixelated;
+    display:block;
+  }
+  .hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between;
+    padding:4px 8px;
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    color:var(--pixel);
+    z-index:2;
+    pointer-events:none;
+  }
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    gap:10px;
+    background: rgba(195,214,165,.92);
+    color:var(--pixel);
+    text-align:center;
+    padding:14px;
+    z-index:3;
+  }
+  .overlay.hidden{display:none;}
+  .overlay h1{
+    font-family:'Press Start 2P', monospace;
+    font-size:15px;
+    margin:0 0 4px;
+    line-height:1.6;
+  }
+  .overlay p{
+    font-size:18px;
+    margin:0;
+    line-height:1.4;
+  }
+  .name-entry{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    margin-top:6px;
+  }
+  .name-entry.hidden{display:none;}
+  .name-entry input{
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    text-align:center;
+    text-transform:uppercase;
+    width:11ch;
+    padding:8px 4px;
+    background:#aebf90;
+    border:2px solid var(--pixel);
+    border-radius:3px;
+    color:var(--pixel);
+    outline:none;
+  }
+  .name-entry button{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    padding:8px 14px;
+    background:var(--pixel);
+    color:var(--screen-bg);
+    border:none;
+    border-radius:3px;
+  }
+  .name-entry button:active{ transform: translateY(1px); }
+  #scoresList{
+    list-style:none;
+    counter-reset:score;
+    margin:0;
+    padding:0;
+    font-size:18px;
+    width:80%;
+    max-width:220px;
+  }
+  #scoresList li{
+    counter-increment:score;
+    display:flex;
+    justify-content:space-between;
+    border-bottom:1px dotted var(--pixel-dim);
+    padding:2px 0;
+  }
+  #scoresList li::before{
+    content: counter(score) ".";
+    width:1.6em;
+  }
+  #scoresList li span:first-of-type{ flex:1; text-align:left; }
+  .menu-link{
+    text-align:center;
+    color:#cfd2c2;
+    font-size:15px;
+    margin-top:10px;
+    cursor:pointer;
+    letter-spacing:1px;
+  }
+  .menu-link:active{ opacity:.6; }
+  .name-entry .menu-link{
+    color:var(--pixel);
+    text-decoration:underline;
+    font-size:14px;
+    margin-top:2px;
+  }
+  .hint{
+    text-align:center;
+    color:#9a9d8c;
+    font-size:12px;
+    margin-top:10px;
+    font-family:'VT323', monospace;
+  }
+</style>
+</head>
+<body tabindex="-1" style="outline:none;">
+
+<div class="phone">
+  <div class="brand">JAGGY · SNAKE</div>
+
+  <div class="screen" id="screenEl">
+    <div class="hud">
+      <span id="scoreLabel">SCORE 000</span>
+      <span id="bestLabel">BEST 000</span>
+    </div>
+    <canvas id="game"></canvas>
+    <div class="overlay" id="overlay">
+      <h1>JAGGY<br>SNAKE</h1>
+      <p id="overlayMsg">Press Enter, click,<br>or tap to begin</p>
+      <div class="name-entry hidden" id="nameEntry">
+        <input id="nameInput" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
+        <button id="saveScoreBtn">SAVE SCORE</button>
+        <div class="menu-link" id="skipSaveLink">Don't save</div>
+      </div>
+    </div>
+    <div class="overlay hidden" id="scoresOverlay">
+      <h1>HIGH<br>SCORES</h1>
+      <ol id="scoresList"></ol>
+      <p>Tap to close</p>
+    </div>
+  </div>
+
+  <div class="hint">Use arrow keys or WASD to play.<br>Click, tap or press enter to begin.</div>
+  <div class="menu-link" id="viewScoresLink">★ View High Scores ★</div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const screenEl = document.getElementById('screenEl');
+  const overlay = document.getElementById('overlay');
+  const overlayMsg = document.getElementById('overlayMsg');
+  const scoreLabel = document.getElementById('scoreLabel');
+  const bestLabel = document.getElementById('bestLabel');
+  const nameEntry = document.getElementById('nameEntry');
+  const nameInput = document.getElementById('nameInput');
+  const saveScoreBtn = document.getElementById('saveScoreBtn');
+  const scoresOverlay = document.getElementById('scoresOverlay');
+  const scoresList = document.getElementById('scoresList');
+  const viewScoresLink = document.getElementById('viewScoresLink');
+  const skipSaveLink = document.getElementById('skipSaveLink');
+
+  const COLS = 20, ROWS = 20;
+  let cell = 10;
+
+  function resize(){
+    const rect = screenEl.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    cell = Math.floor(Math.min(rect.width / COLS, rect.height / ROWS));
+    canvas.width = COLS * cell * dpr;
+    canvas.height = ROWS * cell * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+
+  const PIXEL = getComputedStyle(document.documentElement).getPropertyValue('--pixel').trim();
+  const PIXEL_DIM = getComputedStyle(document.documentElement).getPropertyValue('--pixel-dim').trim();
+
+  let snake, dir, nextDir, food, score, best, speed, timer, running, over;
+  let awaitingName = false;
+  let pausedForScores = false;
+
+  best = Number(localStorage.getItem('jaggy_best') || 0);
+  bestLabel.textContent = 'BEST ' + String(best).padStart(3,'0');
+
+  function getScores(){
+    try{ return JSON.parse(localStorage.getItem('jaggy_scores') || '[]'); }
+    catch(e){ return []; }
+  }
+
+  function saveScoreEntry(name, sc){
+    const list = getScores();
+    list.push({name: name || 'AAA', score: sc});
+    list.sort((a,b) => b.score - a.score);
+    localStorage.setItem('jaggy_scores', JSON.stringify(list.slice(0,10)));
+  }
+
+  function renderScores(){
+    const list = getScores();
+    scoresList.innerHTML = '';
+    if(list.length === 0){
+      const li = document.createElement('li');
+      li.innerHTML = '<span>No scores yet</span><span></span>';
+      scoresList.appendChild(li);
+      return;
+    }
+    list.forEach(entry => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span>' + entry.name + '</span><span>' + entry.score + '</span>';
+      scoresList.appendChild(li);
+    });
+  }
+
+  function reset(){
+    snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
+    dir = {x:1,y:0};
+    nextDir = {x:1,y:0};
+    score = 0;
+    speed = 140;
+    placeFood();
+    running = false;
+    over = false;
+    scoreLabel.textContent = 'SCORE 000';
+  }
+
+  function placeFood(){
+    let ok = false;
+    while(!ok){
+      food = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
+      ok = !snake.some(s => s.x===food.x && s.y===food.y);
+    }
+  }
+
+  function beep(freq, dur){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ac = beep.ctx || (beep.ctx = new AC());
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = 'square';
+      o.frequency.value = freq;
+      g.gain.value = 0.05;
+      o.connect(g); g.connect(ac.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      o.stop(ac.currentTime + dur);
+    }catch(e){}
+  }
+
+  function step(){
+    dir = nextDir;
+    const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+    if(head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS || snake.some(s => s.x===head.x && s.y===head.y)){
+      gameOver();
+      return;
+    }
+
+    snake.unshift(head);
+
+    if(head.x === food.x && head.y === food.y){
+      score++;
+      scoreLabel.textContent = 'SCORE ' + String(score).padStart(3,'0');
+      beep(880, 0.06);
+      placeFood();
+      if(speed > 60 && score % 3 === 0){
+        speed -= 6;
+        restartTimer();
+      }
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function restartTimer(){
+    clearInterval(timer);
+    timer = setInterval(step, speed);
+  }
+
+  function gameOver(){
+    running = false;
+    over = true;
+    clearInterval(timer);
+    beep(120, 0.35);
+    if(score > best){
+      best = score;
+      localStorage.setItem('jaggy_best', String(best));
+      bestLabel.textContent = 'BEST ' + String(best).padStart(3,'0');
+    }
+    overlayMsg.innerHTML = 'You hit something!<br>Score: ' + score;
+    awaitingName = true;
+    nameEntry.classList.remove('hidden');
+    nameInput.value = localStorage.getItem('jaggy_name') || '';
+    overlay.classList.remove('hidden');
+    setTimeout(() => nameInput.focus(), 50);
+  }
+
+  function submitName(){
+    const name = (nameInput.value || 'AAA').trim().toUpperCase().slice(0,10) || 'AAA';
+    localStorage.setItem('jaggy_name', name);
+    saveScoreEntry(name, score);
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    overlayMsg.innerHTML = 'Score saved!<br>Press Enter, click,<br>or tap to play again';
+  }
+
+  function skipSave(){
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    overlayMsg.innerHTML = 'Score not saved.<br>Press Enter, click,<br>or tap to play again';
+  }
+
+  function start(){
+    if(running || awaitingName) return;
+    reset();
+    overlay.classList.add('hidden');
+    running = true;
+    restartTimer();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,COLS*cell, ROWS*cell);
+    // grid dots for LCD feel
+    ctx.fillStyle = PIXEL_DIM;
+    for(let x=0;x<COLS;x++){
+      for(let y=0;y<ROWS;y++){
+        ctx.fillRect(x*cell + cell/2 - 0.5, y*cell + cell/2 - 0.5, 1, 1);
+      }
+    }
+    // food
+    ctx.fillStyle = PIXEL;
+    ctx.fillRect(food.x*cell+2, food.y*cell+2, cell-4, cell-4);
+    // snake
+    snake.forEach((s,i) => {
+      const pad = i===0 ? 1 : 1.5;
+      ctx.fillRect(s.x*cell+pad, s.y*cell+pad, cell-pad*2, cell-pad*2);
+    });
+  }
+
+  function setDir(nx, ny){
+    if(dir.x === -nx && dir.y === -ny) return;
+    nextDir = {x:nx, y:ny};
+  }
+
+  overlay.addEventListener('pointerdown', e => {
+    if(awaitingName) return;
+    start();
+  });
+
+  saveScoreBtn.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    submitName();
+  });
+  skipSaveLink.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    skipSave();
+  });
+  nameInput.addEventListener('pointerdown', e => e.stopPropagation());
+  nameInput.addEventListener('keydown', e => e.stopPropagation());
+
+  viewScoresLink.addEventListener('pointerdown', () => {
+    renderScores();
+    if(running){
+      clearInterval(timer);
+      pausedForScores = true;
+    }
+    scoresOverlay.classList.remove('hidden');
+  });
+  scoresOverlay.addEventListener('pointerdown', () => {
+    scoresOverlay.classList.add('hidden');
+    if(pausedForScores){
+      pausedForScores = false;
+      restartTimer();
+    }
+  });
+
+  window.addEventListener('keydown', e => {
+    if(!scoresOverlay.classList.contains('hidden')) return;
+    if(awaitingName){
+      if(e.key === 'Enter'){ submitName(); }
+      return;
+    }
+    const keyMap = {
+      ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
+      w:[0,-1], s:[0,1], a:[-1,0], d:[1,0]
+    };
+    if(e.key === ' ' || e.key === 'Enter'){
+      start();
+      return;
+    }
+    const d = keyMap[e.key];
+    if(d){
+      e.preventDefault();
+      if(!running && !over){ start(); }
+      setDir(d[0], d[1]);
+    }
+  });
+
+  // swipe controls
+  let touchStart = null;
+  canvas.addEventListener('pointerdown', e => { touchStart = {x:e.clientX, y:e.clientY}; });
+  canvas.addEventListener('pointerup', e => {
+    if(!touchStart) return;
+    const dx = e.clientX - touchStart.x;
+    const dy = e.clientY - touchStart.y;
+    if(Math.abs(dx) < 12 && Math.abs(dy) < 12){
+      if(!running && !over){ start(); }
+      touchStart = null;
+      return;
+    }
+    if(!running && !over){ start(); }
+    if(Math.abs(dx) > Math.abs(dy)){
+      setDir(dx > 0 ? 1 : -1, 0);
+    } else {
+      setDir(0, dy > 0 ? 1 : -1);
+    }
+    touchStart = null;
+  });
+
+  reset();
+  window.addEventListener('resize', resize);
+  resize();
+  document.body.focus();
+  document.addEventListener('pointerdown', () => document.body.focus());
+})();
+<\/script>
+</body>
+</html>`
+    }
+  };
+
+  const menu = document.getElementById('menu');
+  const gameView = document.getElementById('gameView');
+  const gameFrame = document.getElementById('gameFrame');
+  const gameTitle = document.getElementById('gameTitle');
+  const backBtn = document.getElementById('backBtn');
+
+  function openGame(key){
+    const g = GAMES[key];
+    if(!g) return;
+    gameTitle.textContent = g.title;
+    gameFrame.srcdoc = g.html;
+    menu.classList.add('hidden');
+    gameView.classList.remove('hidden');
+  }
+
+  function closeGame(){
+    gameFrame.srcdoc = '';
+    gameView.classList.add('hidden');
+    menu.classList.remove('hidden');
+  }
+
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => openGame(card.dataset.game));
+  });
+  backBtn.addEventListener('click', closeGame);
+})();
+</script>
+</body>
+</html>
