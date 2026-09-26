@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jaggy Snake</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --shell:#4b4d43;
+    --shell-hi:#6b6e5f;
+    --shell-lo:#2f312a;
+    --screen-bg:#c3d6a5;
+    --screen-bg-2:#b6cb96;
+    --pixel:#28331c;
+    --pixel-dim:#28331c55;
+    --btn:#5c5f52;
+    --btn-hi:#7a7d6b;
+    --btn-lo:#232419;
+    --accent:#d94f4f;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
+  }
+  @media (prefers-color-scheme: light){ :root{} }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    height:100%;
+    margin:0;
+    background: radial-gradient(ellipse at 50% 0%, #3a3c34, #1b1c17 70%);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'VT323', monospace;
+    overflow:hidden;
+    touch-action:none;
+  }
+  .phone{
+    width:min(90vmin, 720px);
+    padding:8px 4px 10px;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .brand{
+    text-align:center;
+    color:#cfd2c2;
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    letter-spacing:2px;
+    margin-bottom:12px;
+    text-shadow:0 1px 0 rgba(0,0,0,.5);
+  }
+  .screen{
+    position:relative;
+    background: linear-gradient(180deg, var(--screen-bg), var(--screen-bg-2));
+    border-radius:6px;
+    width:100%;
+    aspect-ratio: 1 / 1;
+    overflow:hidden;
+    box-shadow: inset 0 0 16px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.5);
+  }
+  canvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    image-rendering:pixelated;
+    display:block;
+  }
+  .hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between;
+    padding:4px 8px;
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    color:var(--pixel);
+    z-index:2;
+    pointer-events:none;
+  }
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    gap:10px;
+    background: rgba(195,214,165,.92);
+    color:var(--pixel);
+    text-align:center;
+    padding:14px;
+    z-index:3;
+  }
+  .overlay.hidden{display:none;}
+  .overlay h1{
+    font-family:'Press Start 2P', monospace;
+    font-size:15px;
+    margin:0 0 4px;
+    line-height:1.6;
+  }
+  .overlay p{
+    font-size:18px;
+    margin:0;
+    line-height:1.4;
+  }
+  .name-entry{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    margin-top:6px;
+  }
+  .name-entry.hidden{display:none;}
+  .name-entry input{
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    text-align:center;
+    text-transform:uppercase;
+    width:11ch;
+    padding:8px 4px;
+    background:#aebf90;
+    border:2px solid var(--pixel);
+    border-radius:3px;
+    color:var(--pixel);
+    outline:none;
+  }
+  .name-entry button{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    padding:8px 14px;
+    background:var(--pixel);
+    color:var(--screen-bg);
+    border:none;
+    border-radius:3px;
+  }
+  .name-entry button:active{ transform: translateY(1px); }
+  #scoresList{
+    list-style:none;
+    counter-reset:score;
+    margin:0;
+    padding:0;
+    font-size:18px;
+    width:80%;
+    max-width:220px;
+  }
+  #scoresList li{
+    counter-increment:score;
+    display:flex;
+    justify-content:space-between;
+    border-bottom:1px dotted var(--pixel-dim);
+    padding:2px 0;
+  }
+  #scoresList li::before{
+    content: counter(score) ".";
+    width:1.6em;
+  }
+  #scoresList li span:first-of-type{ flex:1; text-align:left; }
+  .menu-link{
+    text-align:center;
+    color:#cfd2c2;
+    font-size:15px;
+    margin-top:10px;
+    cursor:pointer;
+    letter-spacing:1px;
+  }
+  .menu-link:active{ opacity:.6; }
+  .name-entry .menu-link{
+    color:var(--pixel);
+    text-decoration:underline;
+    font-size:14px;
+    margin-top:2px;
+  }
+  .hint{
+    text-align:center;
+    color:#9a9d8c;
+    font-size:12px;
+    margin-top:10px;
+    font-family:'VT323', monospace;
+  }
+</style>
+</head>
+<body tabindex="-1" style="outline:none;">
+
+<div class="phone">
+  <div class="brand">JAGGY · SNAKE</div>
+
+  <div class="screen" id="screenEl">
+    <div class="hud">
+      <span id="scoreLabel">SCORE 000</span>
+      <span id="bestLabel">BEST 000</span>
+    </div>
+    <canvas id="game"></canvas>
+    <div class="overlay" id="overlay">
+      <h1>JAGGY<br>SNAKE</h1>
+      <p id="overlayMsg">Press Enter, click,<br>or tap to begin</p>
+      <div class="name-entry hidden" id="nameEntry">
+        <input id="nameInput" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
+        <button id="saveScoreBtn">SAVE SCORE</button>
+        <div class="menu-link" id="skipSaveLink">Don't save</div>
+      </div>
+    </div>
+    <div class="overlay hidden" id="scoresOverlay">
+      <h1>HIGH<br>SCORES</h1>
+      <ol id="scoresList"></ol>
+      <p>Tap to close</p>
+    </div>
+  </div>
+
+  <div class="hint">Use arrow keys or WASD to play.<br>Click, tap or press enter to begin.</div>
+  <div class="menu-link" id="viewScoresLink">★ View High Scores ★</div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const screenEl = document.getElementById('screenEl');
+  const overlay = document.getElementById('overlay');
+  const overlayMsg = document.getElementById('overlayMsg');
+  const scoreLabel = document.getElementById('scoreLabel');
+  const bestLabel = document.getElementById('bestLabel');
+  const nameEntry = document.getElementById('nameEntry');
+  const nameInput = document.getElementById('nameInput');
+  const saveScoreBtn = document.getElementById('saveScoreBtn');
+  const scoresOverlay = document.getElementById('scoresOverlay');
+  const scoresList = document.getElementById('scoresList');
+  const viewScoresLink = document.getElementById('viewScoresLink');
+  const skipSaveLink = document.getElementById('skipSaveLink');
+
+  const COLS = 20, ROWS = 20;
+  let cell = 10;
+
+  function resize(){
+    const rect = screenEl.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    cell = Math.floor(Math.min(rect.width / COLS, rect.height / ROWS));
+    canvas.width = COLS * cell * dpr;
+    canvas.height = ROWS * cell * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+
+  const PIXEL = getComputedStyle(document.documentElement).getPropertyValue('--pixel').trim();
+  const PIXEL_DIM = getComputedStyle(document.documentElement).getPropertyValue('--pixel-dim').trim();
+
+  let snake, dir, nextDir, food, score, best, speed, timer, running, over;
+  let awaitingName = false;
+  let pausedForScores = false;
+
+  best = Number(localStorage.getItem('jaggy_best') || 0);
+  bestLabel.textContent = 'BEST ' + String(best).padStart(3,'0');
+
+  function getScores(){
+    try{ return JSON.parse(localStorage.getItem('jaggy_scores') || '[]'); }
+    catch(e){ return []; }
+  }
+
+  function saveScoreEntry(name, sc){
+    const list = getScores();
+    list.push({name: name || 'AAA', score: sc});
+    list.sort((a,b) => b.score - a.score);
+    localStorage.setItem('jaggy_scores', JSON.stringify(list.slice(0,10)));
+  }
+
+  function renderScores(){
+    const list = getScores();
+    scoresList.innerHTML = '';
+    if(list.length === 0){
+      const li = document.createElement('li');
+      li.innerHTML = '<span>No scores yet</span><span></span>';
+      scoresList.appendChild(li);
+      return;
+    }
+    list.forEach(entry => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span>' + entry.name + '</span><span>' + entry.score + '</span>';
+      scoresList.appendChild(li);
+    });
+  }
+
+  function reset(){
+    snake = [{x:8,y:9},{x:7,y:9},{x:6,y:9}];
+    dir = {x:1,y:0};
+    nextDir = {x:1,y:0};
+    score = 0;
+    speed = 140;
+    placeFood();
+    running = false;
+    over = false;
+    scoreLabel.textContent = 'SCORE 000';
+  }
+
+  function placeFood(){
+    let ok = false;
+    while(!ok){
+      food = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
+      ok = !snake.some(s => s.x===food.x && s.y===food.y);
+    }
+  }
+
+  function beep(freq, dur){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ac = beep.ctx || (beep.ctx = new AC());
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = 'square';
+      o.frequency.value = freq;
+      g.gain.value = 0.05;
+      o.connect(g); g.connect(ac.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      o.stop(ac.currentTime + dur);
+    }catch(e){}
+  }
+
+  function step(){
+    dir = nextDir;
+    const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+    if(head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS || snake.some(s => s.x===head.x && s.y===head.y)){
+      gameOver();
+      return;
+    }
+
+    snake.unshift(head);
+
+    if(head.x === food.x && head.y === food.y){
+      score++;
+      scoreLabel.textContent = 'SCORE ' + String(score).padStart(3,'0');
+      beep(880, 0.06);
+      placeFood();
+      if(speed > 60 && score % 3 === 0){
+        speed -= 6;
+        restartTimer();
+      }
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function restartTimer(){
+    clearInterval(timer);
+    timer = setInterval(step, speed);
+  }
+
+  function gameOver(){
+    running = false;
+    over = true;
+    clearInterval(timer);
+    beep(120, 0.35);
+    if(score > best){
+      best = score;
+      localStorage.setItem('jaggy_best', String(best));
+      bestLabel.textContent = 'BEST ' + String(best).padStart(3,'0');
+    }
+    overlayMsg.innerHTML = 'You hit something!<br>Score: ' + score;
+    awaitingName = true;
+    nameEntry.classList.remove('hidden');
+    nameInput.value = localStorage.getItem('jaggy_name') || '';
+    overlay.classList.remove('hidden');
+    setTimeout(() => nameInput.focus(), 50);
+  }
+
+  function submitName(){
+    const name = (nameInput.value || 'AAA').trim().toUpperCase().slice(0,10) || 'AAA';
+    localStorage.setItem('jaggy_name', name);
+    saveScoreEntry(name, score);
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    overlayMsg.innerHTML = 'Score saved!<br>Press Enter, click,<br>or tap to play again';
+  }
+
+  function skipSave(){
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    overlayMsg.innerHTML = 'Score not saved.<br>Press Enter, click,<br>or tap to play again';
+  }
+
+  function start(){
+    if(running || awaitingName) return;
+    reset();
+    overlay.classList.add('hidden');
+    running = true;
+    restartTimer();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,COLS*cell, ROWS*cell);
+    // grid dots for LCD feel
+    ctx.fillStyle = PIXEL_DIM;
+    for(let x=0;x<COLS;x++){
+      for(let y=0;y<ROWS;y++){
+        ctx.fillRect(x*cell + cell/2 - 0.5, y*cell + cell/2 - 0.5, 1, 1);
+      }
+    }
+    // food
+    ctx.fillStyle = PIXEL;
+    ctx.fillRect(food.x*cell+2, food.y*cell+2, cell-4, cell-4);
+    // snake
+    snake.forEach((s,i) => {
+      const pad = i===0 ? 1 : 1.5;
+      ctx.fillRect(s.x*cell+pad, s.y*cell+pad, cell-pad*2, cell-pad*2);
+    });
+  }
+
+  function setDir(nx, ny){
+    if(dir.x === -nx && dir.y === -ny) return;
+    nextDir = {x:nx, y:ny};
+  }
+
+  overlay.addEventListener('pointerdown', e => {
+    if(awaitingName) return;
+    start();
+  });
+
+  saveScoreBtn.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    submitName();
+  });
+  skipSaveLink.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    skipSave();
+  });
+  nameInput.addEventListener('pointerdown', e => e.stopPropagation());
+  nameInput.addEventListener('keydown', e => e.stopPropagation());
+
+  viewScoresLink.addEventListener('pointerdown', () => {
+    renderScores();
+    if(running){
+      clearInterval(timer);
+      pausedForScores = true;
+    }
+    scoresOverlay.classList.remove('hidden');
+  });
+  scoresOverlay.addEventListener('pointerdown', () => {
+    scoresOverlay.classList.add('hidden');
+    if(pausedForScores){
+      pausedForScores = false;
+      restartTimer();
+    }
+  });
+
+  window.addEventListener('keydown', e => {
+    if(!scoresOverlay.classList.contains('hidden')) return;
+    if(awaitingName){
+      if(e.key === 'Enter'){ submitName(); }
+      return;
+    }
+    const keyMap = {
+      ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
+      w:[0,-1], s:[0,1], a:[-1,0], d:[1,0]
+    };
+    if(e.key === ' ' || e.key === 'Enter'){
+      start();
+      return;
+    }
+    const d = keyMap[e.key];
+    if(d){
+      e.preventDefault();
+      if(!running && !over){ start(); }
+      setDir(d[0], d[1]);
+    }
+  });
+
+  // swipe controls
+  let touchStart = null;
+  canvas.addEventListener('pointerdown', e => { touchStart = {x:e.clientX, y:e.clientY}; });
+  canvas.addEventListener('pointerup', e => {
+    if(!touchStart) return;
+    const dx = e.clientX - touchStart.x;
+    const dy = e.clientY - touchStart.y;
+    if(Math.abs(dx) < 12 && Math.abs(dy) < 12){
+      if(!running && !over){ start(); }
+      touchStart = null;
+      return;
+    }
+    if(!running && !over){ start(); }
+    if(Math.abs(dx) > Math.abs(dy)){
+      setDir(dx > 0 ? 1 : -1, 0);
+    } else {
+      setDir(0, dy > 0 ? 1 : -1);
+    }
+    touchStart = null;
+  });
+
+  reset();
+  window.addEventListener('resize', resize);
+  resize();
+  document.body.focus();
+  document.addEventListener('pointerdown', () => document.body.focus());
+})();
+</script>
+</body>
+</html>

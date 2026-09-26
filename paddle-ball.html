@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paddle Ball</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f0a;
+    --fg:#3dff6e;
+    --fg-dim:#1c7a37;
+    --amber:#ffb000;
+    --line:#123018;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:'Press Start 2P', monospace;
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    height:100%;
+  }
+
+  #wrap{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+
+  h1{
+    font-size:clamp(14px,4vw,22px);
+    letter-spacing:4px;
+    margin:0;
+    color:var(--fg);
+    text-shadow:0 0 6px var(--fg-dim);
+  }
+
+  #hud{
+    display:flex;
+    justify-content:space-between;
+    width:100%;
+    font-size:10px;
+    color:var(--fg);
+    padding:0 4px;
+  }
+
+  #stage{
+    position:relative;
+    border:3px solid var(--fg);
+    box-shadow:0 0 0 4px var(--bg), 0 0 18px var(--fg-dim), inset 0 0 30px rgba(61,255,110,0.08);
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px),
+      var(--bg);
+  }
+
+  canvas{
+    display:block;
+    image-rendering:pixelated;
+  }
+
+  #overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    background:rgba(11,15,10,0.88);
+    text-align:center;
+    padding:20px;
+  }
+  #overlay.hidden{display:none;}
+  #overlay p{
+    font-size:9px;
+    line-height:1.9;
+    color:var(--fg);
+    margin:0;
+    max-width:280px;
+  }
+  #overlay .title{
+    font-size:16px;
+    color:var(--amber);
+    text-shadow:0 0 8px var(--amber);
+    margin:0;
+  }
+  #overlay .sub{
+    font-size:9px;
+    color:var(--fg-dim);
+  }
+
+  button{
+    font-family:'Press Start 2P', monospace;
+    background:var(--bg);
+    color:var(--fg);
+    border:2px solid var(--fg);
+    padding:10px 18px;
+    font-size:10px;
+    cursor:pointer;
+    letter-spacing:2px;
+  }
+  button:hover{ background:var(--fg); color:var(--bg); }
+  button:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  #footer{
+    font-size:8px;
+    color:var(--fg-dim);
+    letter-spacing:1px;
+  }
+
+  @media (max-width: 480px){
+    #footer{display:none;}
+  }
+
+  .name-entry{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    margin-top:2px;
+  }
+  .name-entry.hidden{display:none;}
+  .name-entry input{
+    font-family:'Press Start 2P', monospace;
+    font-size:11px;
+    text-align:center;
+    text-transform:uppercase;
+    width:11ch;
+    padding:9px 4px;
+    background:var(--bg);
+    border:2px solid var(--fg);
+    color:var(--fg);
+    outline:none;
+    letter-spacing:2px;
+  }
+  .name-entry input:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  .menu-link{
+    font-size:9px;
+    color:var(--fg-dim);
+    text-decoration:underline;
+    cursor:pointer;
+    letter-spacing:1px;
+    background:none;
+    border:none;
+    font-family:'Press Start 2P', monospace;
+    padding:4px;
+  }
+  .menu-link:hover{ color:var(--fg); }
+
+  #scoresOverlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    background:rgba(11,15,10,0.94);
+    text-align:center;
+    padding:20px;
+  }
+  #scoresOverlay.hidden{display:none;}
+
+  #scoresList{
+    list-style:none;
+    counter-reset:score;
+    margin:0;
+    padding:0;
+    width:100%;
+    max-width:260px;
+    font-size:10px;
+  }
+  #scoresList li{
+    counter-increment:score;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    border-bottom:1px dotted var(--fg-dim);
+    padding:5px 2px;
+    color:var(--fg);
+  }
+  #scoresList li::before{
+    content: counter(score) ".";
+    width:1.8em;
+    text-align:left;
+    color:var(--fg-dim);
+  }
+  #scoresList li span:first-of-type{ flex:1; text-align:left; }
+  #scoresList li span:last-of-type{ color:var(--amber); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>PADDLE BALL</h1>
+  <div id="hud" style="width:100%; max-width:600px;">
+    <span>SCORE <span id="score">0</span></span>
+    <span>BEST <span id="best">0</span></span>
+    <span>LIVES <span id="lives">3</span></span>
+  </div>
+  <div id="stage">
+    <canvas id="game" width="600" height="400"></canvas>
+    <div id="overlay">
+      <p class="title">PADDLE BALL</p>
+      <p>MOVE THE PADDLE WITH YOUR MOUSE, ARROW KEYS,<br>OR FINGER. DON'T LET THE BALL FALL.</p>
+      <button id="startBtn">START</button>
+      <p class="sub" id="statusMsg">PRESS SPACE OR TAP START</p>
+      <div class="name-entry hidden" id="nameEntry">
+        <input id="nameInput" maxlength="10" placeholder="YOUR NAME" autocomplete="off">
+        <button id="saveScoreBtn">SAVE SCORE</button>
+        <button class="menu-link" id="skipSaveLink" type="button">DON'T SAVE</button>
+      </div>
+    </div>
+    <div id="scoresOverlay" class="hidden">
+      <p class="title">HIGH SCORES</p>
+      <ol id="scoresList"></ol>
+      <button id="closeScoresBtn">CLOSE</button>
+    </div>
+  </div>
+  <div id="footer">← → OR A/D TO MOVE · SPACE TO LAUNCH</div>
+  <button class="menu-link" id="viewScoresLink" type="button">★ VIEW HIGH SCORES ★</button>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const livesEl = document.getElementById('lives');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const statusMsg = document.getElementById('statusMsg');
+  const nameEntry = document.getElementById('nameEntry');
+  const nameInput = document.getElementById('nameInput');
+  const saveScoreBtn = document.getElementById('saveScoreBtn');
+  const skipSaveLink = document.getElementById('skipSaveLink');
+  const scoresOverlay = document.getElementById('scoresOverlay');
+  const scoresList = document.getElementById('scoresList');
+  const viewScoresLink = document.getElementById('viewScoresLink');
+  const closeScoresBtn = document.getElementById('closeScoresBtn');
+
+  let best = 0;
+  try {
+    const stored = localStorage.getItem('paddleBallBest');
+    if (stored) best = parseInt(stored, 10) || 0;
+  } catch(e) {}
+  bestEl.textContent = best;
+
+  let awaitingName = false;
+
+  function getScores(){
+    try { return JSON.parse(localStorage.getItem('paddleBallScores') || '[]'); }
+    catch(e) { return []; }
+  }
+
+  function saveScoreEntry(name, sc){
+    const list = getScores();
+    list.push({ name: name || 'AAA', score: sc });
+    list.sort((a,b) => b.score - a.score);
+    try { localStorage.setItem('paddleBallScores', JSON.stringify(list.slice(0,10))); } catch(e) {}
+  }
+
+  function renderScores(){
+    const list = getScores();
+    scoresList.innerHTML = '';
+    if (list.length === 0){
+      const li = document.createElement('li');
+      li.innerHTML = '<span>NO SCORES YET</span><span></span>';
+      scoresList.appendChild(li);
+      return;
+    }
+    list.forEach(entry => {
+      const li = document.createElement('li');
+      li.innerHTML = '<span>' + entry.name + '</span><span>' + entry.score + '</span>';
+      scoresList.appendChild(li);
+    });
+  }
+
+  function submitName(){
+    const name = (nameInput.value || 'AAA').trim().toUpperCase().slice(0,10) || 'AAA';
+    try { localStorage.setItem('paddleBallName', name); } catch(e) {}
+    saveScoreEntry(name, score);
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    statusMsg.textContent = 'SCORE SAVED · SPACE TO RETRY';
+    startBtn.classList.remove('hidden');
+  }
+
+  function skipSave(){
+    nameEntry.classList.add('hidden');
+    awaitingName = false;
+    statusMsg.textContent = 'NOT SAVED · SPACE TO RETRY';
+    startBtn.classList.remove('hidden');
+  }
+
+  const PADDLE_W = 90, PADDLE_H = 12;
+  const BALL_R = 7;
+
+  let paddle, ball, score, lives, running, launched, keys;
+
+  function resetGame(){
+    paddle = { x: W/2 - PADDLE_W/2, y: H - 34, w: PADDLE_W, h: PADDLE_H, speed: 7 };
+    ball = { x: W/2, y: H - 34 - BALL_R - 1, vx: 0, vy: 0, speed: 4.5 };
+    score = 0;
+    lives = 3;
+    running = false;
+    launched = false;
+    keys = {};
+    scoreEl.textContent = score;
+    livesEl.textContent = lives;
+  }
+
+  function launchBall(){
+    if (launched) return;
+    launched = true;
+    const angle = (Math.random() * 0.6 - 0.3) - Math.PI/2; // mostly upward
+    ball.vx = Math.cos(angle) * ball.speed;
+    ball.vy = Math.sin(angle) * ball.speed;
+  }
+
+  function startGame(){
+    resetGame();
+    running = true;
+    overlay.classList.add('hidden');
+    nameEntry.classList.add('hidden');
+    startBtn.classList.remove('hidden');
+    awaitingName = false;
+    requestAnimationFrame(loop);
+  }
+
+  function endGame(win){
+    running = false;
+    if (score > best) {
+      best = score;
+      bestEl.textContent = best;
+      try { localStorage.setItem('paddleBallBest', String(best)); } catch(e) {}
+    }
+    overlay.classList.remove('hidden');
+    overlay.querySelector('.title').textContent = 'GAME OVER';
+    startBtn.textContent = 'RETRY';
+
+    const list = getScores();
+    const qualifies = list.length < 10 || score > list[list.length - 1].score;
+    if (qualifies && score > 0){
+      awaitingName = true;
+      statusMsg.textContent = 'SCORE ' + score + ' · NEW HIGH SCORE!';
+      startBtn.classList.add('hidden');
+      nameEntry.classList.remove('hidden');
+      nameInput.value = localStorage.getItem('paddleBallName') || '';
+      setTimeout(() => nameInput.focus(), 50);
+    } else {
+      statusMsg.textContent = 'SCORE ' + score + ' · PRESS SPACE TO RETRY';
+    }
+  }
+
+  function draw(){
+    ctx.fillStyle = '#0b0f0a';
+    ctx.fillRect(0,0,W,H);
+
+    // center dashed line
+    ctx.strokeStyle = '#1c7a37';
+    ctx.setLineDash([6,8]);
+    ctx.beginPath();
+    ctx.moveTo(0, H-60);
+    ctx.lineTo(W, H-60);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // paddle
+    ctx.fillStyle = '#3dff6e';
+    ctx.shadowColor = '#3dff6e';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+
+    // ball
+    ctx.fillStyle = '#ffb000';
+    ctx.shadowColor = '#ffb000';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    if (!launched){
+      ctx.fillStyle = '#1c7a37';
+      ctx.font = '9px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('SPACE / TAP TO LAUNCH', W/2, H/2);
+    }
+  }
+
+  function update(){
+    // paddle movement (keyboard)
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) paddle.x -= paddle.speed;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) paddle.x += paddle.speed;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, paddle.x));
+
+    if (!launched){
+      ball.x = paddle.x + paddle.w/2;
+      ball.y = paddle.y - BALL_R - 1;
+      return;
+    }
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // wall collisions
+    if (ball.x - BALL_R < 0){ ball.x = BALL_R; ball.vx *= -1; }
+    if (ball.x + BALL_R > W){ ball.x = W - BALL_R; ball.vx *= -1; }
+    if (ball.y - BALL_R < 0){ ball.y = BALL_R; ball.vy *= -1; }
+
+    // paddle collision
+    if (ball.vy > 0 &&
+        ball.y + BALL_R >= paddle.y &&
+        ball.y + BALL_R <= paddle.y + paddle.h + 6 &&
+        ball.x >= paddle.x - BALL_R &&
+        ball.x <= paddle.x + paddle.w + BALL_R){
+      ball.y = paddle.y - BALL_R;
+      const hitPos = (ball.x - (paddle.x + paddle.w/2)) / (paddle.w/2); // -1..1
+      const angle = hitPos * (Math.PI/3) - Math.PI/2; // spread up to 60deg
+      ball.speed = Math.min(ball.speed + 0.15, 11);
+      ball.vx = Math.cos(angle) * ball.speed;
+      ball.vy = Math.sin(angle) * ball.speed;
+      score++;
+      scoreEl.textContent = score;
+    }
+
+    // missed
+    if (ball.y - BALL_R > H){
+      lives--;
+      livesEl.textContent = lives;
+      if (lives <= 0){
+        endGame(false);
+        return;
+      }
+      launched = false;
+      ball.speed = 4.5;
+    }
+  }
+
+  function loop(){
+    if (!running) return;
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // controls
+  window.addEventListener('keydown', (e) => {
+    if (awaitingName){
+      if (e.key === 'Enter') submitName();
+      return;
+    }
+    if (!scoresOverlay.classList.contains('hidden')) return;
+    keys[e.key] = true;
+    if (e.key === ' '){
+      e.preventDefault();
+      if (!running){ startGame(); }
+      else launchBall();
+    }
+  });
+  window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / rect.width;
+    const x = (e.clientX - rect.left) * scale;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, x - paddle.w/2));
+  });
+  canvas.addEventListener('click', () => {
+    if (awaitingName || !scoresOverlay.classList.contains('hidden')) return;
+    if (!running) startGame(); else launchBall();
+  });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const scale = W / rect.width;
+    const x = (e.touches[0].clientX - rect.left) * scale;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, x - paddle.w/2));
+  }, { passive:false });
+  canvas.addEventListener('touchstart', () => {
+    if (awaitingName || !scoresOverlay.classList.contains('hidden')) return;
+    if (!running) startGame(); else launchBall();
+  });
+
+  startBtn.addEventListener('click', () => {
+    if (awaitingName) return;
+    startGame();
+  });
+
+  saveScoreBtn.addEventListener('click', (e) => { e.stopPropagation(); submitName(); });
+  skipSaveLink.addEventListener('click', (e) => { e.stopPropagation(); skipSave(); });
+  nameInput.addEventListener('click', (e) => e.stopPropagation());
+  nameInput.addEventListener('keydown', (e) => e.stopPropagation());
+
+  viewScoresLink.addEventListener('click', () => {
+    renderScores();
+    scoresOverlay.classList.remove('hidden');
+  });
+  closeScoresBtn.addEventListener('click', () => {
+    scoresOverlay.classList.add('hidden');
+  });
+
+  // responsive canvas sizing
+  function resize(){
+    const maxW = Math.min(600, window.innerWidth - 32);
+    const ratio = H / W;
+    canvas.style.width = maxW + 'px';
+    canvas.style.height = (maxW * ratio) + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  resetGame();
+  draw();
+})();
+</script>
+</body>
+</html>
